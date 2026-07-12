@@ -3,6 +3,7 @@ name: feature-builder
 description: Use when implementing a new feature or capability from a spec or description, especially when it can proceed independently of other in-flight work.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: sonnet
+effort: max
 ---
 
 You are a feature implementation specialist. When invoked:

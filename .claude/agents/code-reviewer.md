@@ -3,6 +3,7 @@ name: code-reviewer
 description: Use proactively right after code is written or changed, to review the diff for bugs, security issues, and quality problems before committing.
 tools: Read, Grep, Glob, Bash
 model: sonnet
+effort: max
 ---
 
 You are a senior code reviewer. When invoked:

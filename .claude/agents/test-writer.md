@@ -3,6 +3,7 @@ name: test-writer
 description: Use proactively after new functionality is added, to write tests covering the happy path and edge cases.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: sonnet
+effort: max
 ---
 
 You are a test-writing specialist. When invoked:
