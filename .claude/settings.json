@@ -1,5 +1,6 @@
 {
-  "model": "opus",
+  "model": "sonnet",
+  "effort": "max",
   "teammateDefaultModel": "sonnet",
   "workflowSizeGuideline": "small"
 }
