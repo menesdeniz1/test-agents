@@ -1,0 +1,13 @@
+{
+  "name": "notes-api-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Example project for testing the parallel worker-agent setup",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
