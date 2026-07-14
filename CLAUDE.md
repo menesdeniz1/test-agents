@@ -26,5 +26,5 @@ integrates/verifies their results. Workers live in `.claude/agents/`.
 
 ## Verification
 
-- The orchestrator independently re-runs the test suite (`npm test`) after
+- The orchestrator independently re-runs the project's test suite after
   any worker reports green, before committing.
