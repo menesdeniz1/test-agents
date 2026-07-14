@@ -2,7 +2,7 @@
 name: debugger
 description: Use when there is a failing test, an error, a crash, or unexpected behavior that needs root-causing and fixing.
 tools: Read, Grep, Glob, Bash, Edit
-model: sonnet
+model: opus
 effort: max
 ---
 
