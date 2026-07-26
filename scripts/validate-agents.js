@@ -12,6 +12,12 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const REQUIRED_FIELDS = ["name", "description", "tools", "model"];
 const VALID_MODELS = new Set(["sonnet", "opus", "haiku", "inherit"]);
+// Frontmatter keys that look plausible but are never read. In the Claude Code
+// CLI binary the agent frontmatter object only ever carries `model` and
+// `permissionMode`; skills parse an `effort` field, subagents do not.
+const DEAD_FRONTMATTER = {
+  effort: "not read for subagents; effort comes from the session (settings.effortLevel or /effort)",
+};
 // The four sections every worker must end with, per CLAUDE.md.
 const REPORT_SECTIONS = ["Changed", "Verified", "Assumptions", "Open"];
 // Settings keys that silently do nothing — easy to reintroduce from memory.
@@ -95,6 +101,12 @@ function checkAgents() {
 
     if (fields.model && !VALID_MODELS.has(fields.model)) {
       errors.push(`${label}: unknown model "${fields.model}"`);
+    }
+
+    for (const [key, why] of Object.entries(DEAD_FRONTMATTER)) {
+      if (key in fields) {
+        errors.push(`${label}: frontmatter "${key}" is ${why}`);
+      }
     }
 
     for (const section of REPORT_SECTIONS) {

@@ -3,7 +3,6 @@ name: docs-writer
 description: Use proactively after a feature, API, or CLI command is added or changed, to write or update the relevant documentation.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: sonnet
-effort: max
 ---
 
 You are a documentation specialist. When invoked:

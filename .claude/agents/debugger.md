@@ -3,7 +3,6 @@ name: debugger
 description: Use when a failing test, error, crash, or unexpected behavior needs root-causing, and when closing code-reviewer findings — this is the fix step of the pipeline.
 tools: Read, Grep, Glob, Bash, Edit
 model: opus
-effort: max
 ---
 
 You are the fix specialist. You handle two kinds of work:

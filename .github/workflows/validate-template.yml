@@ -13,3 +13,86 @@ jobs:
         with:
           node-version: 24
       - run: node scripts/validate-agents.js
+
+  # The installers are the most bug-prone part of this repo: three real
+  # defects shipped because install.sh was written but never executed, and
+  # all three broke the update path while leaving fresh install working.
+  # These jobs exercise both paths on both platforms.
+  installer-bash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: install.sh has no CR characters
+        run: |
+          if grep -q $'\r' install.sh; then
+            echo "install.sh contains CRLF; bash will fail with 'bad interpreter'" >&2
+            exit 1
+          fi
+
+      - name: fresh install preserves an existing CLAUDE.md
+        run: |
+          mkdir -p /tmp/proj && cd /tmp/proj
+          printf '# My Project\n\nCustom rule that must survive.\n' > CLAUDE.md
+          bash "$GITHUB_WORKSPACE/install.sh" .
+          grep -q 'Custom rule that must survive' CLAUDE.md
+          grep -q '^# My Project' CLAUDE.md
+          test "$(grep -c 'agent-template:begin' CLAUDE.md)" -eq 1
+          test -f .claude/agents/debugger.md
+          test -f .claude/TEMPLATE_VERSION
+          test -f .claude/.template-manifest
+
+      - name: re-running updates rather than duplicating
+        run: |
+          cd /tmp/proj
+          bash "$GITHUB_WORKSPACE/install.sh" . | tee out.txt
+          grep -q 'agents updated' out.txt
+          test "$(grep -c 'agent-template:begin' CLAUDE.md)" -eq 1
+          grep -q 'Custom rule that must survive' CLAUDE.md
+
+      - name: locally edited files are kept, the rest still update
+        run: |
+          cd /tmp/proj
+          echo '<!-- local tweak -->' >> .claude/agents/debugger.md
+          bash "$GITHUB_WORKSPACE/install.sh" . | tee out2.txt
+          grep -q 'locally modified' out2.txt
+          grep -q 'local tweak' .claude/agents/debugger.md
+          grep -q 'agents updated' out2.txt
+
+  installer-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Windows PowerShell 5.1, not pwsh 7: the BOM and ANSI-parsing bugs
+      # this guards against only exist in 5.1.
+      - name: fresh install preserves an existing CLAUDE.md
+        shell: powershell
+        run: |
+          $p = "$env:RUNNER_TEMP\proj"
+          New-Item -ItemType Directory -Force -Path $p | Out-Null
+          "# My Project`n`nCustom rule that must survive." | Out-File "$p\CLAUDE.md" -Encoding utf8
+          & "$env:GITHUB_WORKSPACE\install.ps1" -Target $p
+          $md = Get-Content "$p\CLAUDE.md" -Raw
+          if (-not $md.Contains('Custom rule that must survive')) { throw 'existing CLAUDE.md content was lost' }
+          if (([regex]::Matches($md,'agent-template:begin')).Count -ne 1) { throw 'expected exactly one managed block' }
+          if (-not (Test-Path "$p\.claude\TEMPLATE_VERSION")) { throw 'no version stamp' }
+
+      - name: manifest is BOM-free so install.sh can read it
+        shell: powershell
+        run: |
+          $f = "$env:RUNNER_TEMP\proj\.claude\.template-manifest"
+          $b = Get-Content $f -Encoding Byte -TotalCount 3
+          if ($b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF) { throw 'manifest starts with a BOM' }
+          $first = (Get-Content $f)[0]
+          if ($first -cnotmatch '^[0-9a-f]{64}  ') { throw "manifest hash is not lowercase hex: $first" }
+
+      - name: re-running updates rather than duplicating
+        shell: powershell
+        run: |
+          $p = "$env:RUNNER_TEMP\proj"
+          $out = & "$env:GITHUB_WORKSPACE\install.ps1" -Target $p | Out-String
+          if ($out -notmatch 'agents updated') { throw "expected an update, got: $out" }
+          $md = Get-Content "$p\CLAUDE.md" -Raw
+          if (([regex]::Matches($md,'agent-template:begin')).Count -ne 1) { throw 'block was duplicated' }
+          if (-not $md.Contains('Custom rule that must survive')) { throw 'user content lost on update' }
