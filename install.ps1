@@ -178,12 +178,15 @@ $lines = $newManifest.Keys | Sort-Object | ForEach-Object { "$($newManifest[$_])
 Write-TextFile $manifestPath (($lines -join "`n") + "`n")
 
 # --- report ------------------------------------------------------------
-Write-Host ""
-Write-Host "Installed agent template $version into $Target" -ForegroundColor Green
-if ($installed.Count) { Write-Host "  agents installed: $($installed -join ', ')" }
-if ($updated.Count)   { Write-Host "  agents updated:   $($updated -join ', ')" }
-if ($kept.Count)      { Write-Host "  agents kept (locally modified, -Force to overwrite): $($kept -join ', ')" -ForegroundColor Yellow }
-Write-Host "  settings: $settingsNote"
-Write-Host "  CLAUDE.md: $mdNote"
-Write-Host ""
-Write-Host "Next: fill in the Project context section of CLAUDE.md (stack, test/lint/build commands)."
+# Write-Output, not Write-Host: Write-Host goes straight to the console and
+# never reaches the pipeline, so anything capturing this script's output --
+# CI assertions, a log file, a wrapper script -- would get an empty string.
+Write-Output ""
+Write-Output "Installed agent template $version into $Target"
+if ($installed.Count) { Write-Output "  agents installed: $($installed -join ', ')" }
+if ($updated.Count)   { Write-Output "  agents updated:   $($updated -join ', ')" }
+if ($kept.Count)      { Write-Output "  agents kept (locally modified, -Force to overwrite): $($kept -join ', ')" }
+Write-Output "  settings: $settingsNote"
+Write-Output "  CLAUDE.md: $mdNote"
+Write-Output ""
+Write-Output "Next: fill in the Project context section of CLAUDE.md (stack, test/lint/build commands)."
