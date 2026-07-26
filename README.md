@@ -17,6 +17,7 @@ oraya taşıyabilirsin. Proje kodu içermez — sadece ekip mantığı.
     ├── test-writer.md     # test yazar           (sonnet)
     └── docs-writer.md     # dökümante eder       (sonnet)
 CLAUDE.md                  # ekip çalışma kuralları (her oturumda otomatik yüklenir)
+install.ps1 / install.sh   # projeye kur/güncelle (hiçbir şeyi ezmeden)
 golden-task/               # şablonu ölçmek için sabit referans görev
 scripts/validate-agents.js # ajan dosyalarının biçim kontrolü
 .github/workflows/         # bu kontrolü her push'ta koşan CI
@@ -44,20 +45,40 @@ Her worker cevabını sabit dört başlıkla bitirir — **Changed / Verified /
 Assumptions / Open** — böylece zincirleme mekanik olarak yapılabilir.
 Ayrıntılar `CLAUDE.md`'de.
 
-## Yeni projeye kurulum
+## Kurulum ve güncelleme
 
-```bash
-# Yöntem 1 — bu repodan başla
-git clone <bu-repo> yeni-projem && cd yeni-projem
-# (istersen git geçmişini sıfırla: rm -rf .git && git init)
+Elle kopyalama yapma — install script'i kullan. Elle `cp` mevcut projenin
+`CLAUDE.md`'sini siler; script silmez.
 
-# Yöntem 2 — mevcut projeye ekle
-cp -r .claude/ CLAUDE.md /path/to/mevcut-proje/
+```powershell
+# Windows
+.\install.ps1 -Target C:\code\projem
 ```
 
-Sonra `CLAUDE.md`'deki **Project context** bölümünü doldur (stack, test/lint/
-build komutları) — worker'lar "testleri koş" derken neyi kastettiğini oradan
-öğrenir. Ardından projenin kökünde `claude` başlat.
+```bash
+# macOS / Linux
+./install.sh /path/to/projem
+```
+
+Script hiçbir şeyi ezmez:
+
+- **Mevcut `CLAUDE.md` korunur.** Ekip kuralları, script'in sahiplendiği
+  işaretli bir bloğa yazılır. Güncellemede sadece o blok yeniden yazılır;
+  senin yazdığın her şey ve **Project context** bölümün olduğu gibi kalır.
+- **Mevcut `settings.json` korunur.** Şablonunki yanına
+  `settings.json.from-template` olarak bırakılır, birleştirmesi sana kalır.
+- **Elle düzenlediğin ajan dosyaları korunur.** Script kurduğu her dosyanın
+  hash'ini `.claude/.template-manifest`'e yazar; sonraki çalıştırmada
+  dokunulmamış dosyaları günceller, senin değiştirdiklerini bırakır ve
+  hangilerini bıraktığını söyler. `-Force` / `--force` ile üzerine yazarsın.
+
+Aynı komutu tekrar çalıştırmak = güncelleme. Kurulu sürüm
+`.claude/TEMPLATE_VERSION` içinde durur, böylece hangi projenin hangi şablon
+sürümünü taşıdığı belli olur.
+
+Kurulumdan sonra `CLAUDE.md`'deki **Project context** bölümünü doldur (stack,
+test/lint/build komutları) — worker'lar "testleri koş" derken neyi
+kastettiğini oradan öğrenir. Ardından projenin kökünde `claude` başlat.
 
 ## Model / güç yönetimi
 

@@ -107,8 +107,38 @@ function checkAgents() {
   }
 }
 
+// The two installers rewrite the same delimited block in a project's
+// CLAUDE.md. If their markers drift apart they would each manage a separate
+// block and a project installed on one OS could not be updated from the other.
+function checkInstallerMarkersMatch() {
+  const marker = /agent-template:begin[^'"\n]*/;
+  const found = {};
+  for (const file of ["install.ps1", "install.sh"]) {
+    const filePath = path.join(ROOT, file);
+    if (!fs.existsSync(filePath)) {
+      errors.push(`${file}: missing`);
+      continue;
+    }
+    const m = read(filePath).match(marker);
+    if (!m) {
+      errors.push(`${file}: no agent-template:begin marker found`);
+      continue;
+    }
+    found[file] = m[0];
+  }
+  const values = Object.values(found);
+  if (values.length === 2 && values[0] !== values[1]) {
+    errors.push(
+      `install.ps1 and install.sh disagree on the managed-block marker:\n` +
+        `      install.ps1: ${found["install.ps1"]}\n` +
+        `      install.sh:  ${found["install.sh"]}`
+    );
+  }
+}
+
 checkSettings();
 checkAgents();
+checkInstallerMarkersMatch();
 
 if (errors.length > 0) {
   console.error("Template validation failed:\n");

@@ -16,13 +16,21 @@ results no longer compare.
 
 Run it **outside this repo** so the template stays clean:
 
-```bash
-mkdir /tmp/golden && cd /tmp/golden
+```powershell
+# Windows
+New-Item -ItemType Directory -Force $env:TEMP\golden | Set-Location
 git init
-cp -r /path/to/this-repo/.claude . && cp /path/to/this-repo/CLAUDE.md .
+& C:\path\to\this-repo\install.ps1 -Target .
 ```
 
-Fill in the **Project context** section of the copied `CLAUDE.md`:
+```bash
+# macOS / Linux
+mkdir /tmp/golden && cd /tmp/golden
+git init
+/path/to/this-repo/install.sh .
+```
+
+Fill in the **Project context** section of the installed `CLAUDE.md`:
 
 - Stack: Node.js, no dependencies
 - Test command: `node --test`
