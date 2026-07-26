@@ -42,6 +42,14 @@ if ($Target -eq $TemplateRoot) {
 $BeginMarker = '<!-- agent-template:begin (managed block - rewritten on update) -->'
 $EndMarker = '<!-- agent-template:end -->'
 
+# Set-Content -Encoding utf8 writes a BOM on Windows PowerShell 5.1. In the
+# manifest that BOM fuses onto the first hash, so install.sh reads a hash
+# that never matches and reports every file as locally modified.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+function Write-TextFile([string]$path, [string]$text) {
+    [System.IO.File]::WriteAllText($path, $text, $Utf8NoBom)
+}
+
 # --- version stamp -----------------------------------------------------
 $version = 'unknown'
 try {
@@ -68,7 +76,10 @@ if (Test-Path $manifestPath) {
 }
 $newManifest = @{}
 
-function Get-Sha([string]$p) { (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash }
+# Lowercase to match sha256sum/shasum in install.sh. PowerShell's -eq is
+# case-insensitive so it would not notice, but bash's = is, and a project
+# installed on Windows must stay updatable from macOS/Linux.
+function Get-Sha([string]$p) { (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant() }
 
 # Returns 'install', 'update', or 'keep' for one template file.
 function Get-Action([string]$dst, [string]$key) {
@@ -133,21 +144,21 @@ $claudeMd = Join-Path $Target 'CLAUDE.md'
 if (-not (Test-Path $claudeMd)) {
     $body = $block
     if ($projectContext) { $body = "$block`n`n$projectContext" }
-    Set-Content -LiteralPath $claudeMd -Value $body -Encoding utf8
+    Write-TextFile $claudeMd "$body`n"
     $mdNote = 'created CLAUDE.md'
 } else {
-    $existing = Get-Content $claudeMd -Raw
+    $existing = (Get-Content $claudeMd -Raw) -replace '^﻿', ''
     $pattern = [regex]::Escape($BeginMarker) + '[\s\S]*?' + [regex]::Escape($EndMarker)
     if ([regex]::IsMatch($existing, $pattern)) {
         $mergedMd = [regex]::Replace($existing, $pattern, { param($m) $block })
-        Set-Content -LiteralPath $claudeMd -Value $mergedMd -Encoding utf8
+        Write-TextFile $claudeMd $mergedMd
         $mdNote = 'updated the managed block in your existing CLAUDE.md'
     } else {
         $append = $block
         if ($projectContext -and ($existing -notmatch '(?m)^##\s+Project context')) {
             $append = "$block`n`n$projectContext"
         }
-        Add-Content -LiteralPath $claudeMd -Value "`n`n$append" -Encoding utf8
+        Write-TextFile $claudeMd "$($existing.TrimEnd())`n`n$append`n"
         $mdNote = 'appended the managed block to your CLAUDE.md (nothing removed)'
     }
 }
@@ -161,10 +172,10 @@ $stamp = @(
     'Re-run install.ps1 from the template to update. The managed block in',
     'CLAUDE.md is rewritten in place; your Project context is not touched.'
 ) -join "`n"
-Set-Content -LiteralPath (Join-Path $Target '.claude\TEMPLATE_VERSION') -Value $stamp -Encoding utf8
+Write-TextFile (Join-Path $Target '.claude\TEMPLATE_VERSION') "$stamp`n"
 
 $lines = $newManifest.Keys | Sort-Object | ForEach-Object { "$($newManifest[$_])  $_" }
-Set-Content -LiteralPath $manifestPath -Value ($lines -join "`n") -Encoding utf8
+Write-TextFile $manifestPath (($lines -join "`n") + "`n")
 
 # --- report ------------------------------------------------------------
 Write-Host ""

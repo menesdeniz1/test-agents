@@ -101,13 +101,22 @@ if [ ! -e "$TARGET/CLAUDE.md" ]; then
   printf '%s\n\n%s\n' "$block" "$project_context" > "$TARGET/CLAUDE.md"
   md_note="created CLAUDE.md"
 elif grep -qF "$BEGIN_MARKER" "$TARGET/CLAUDE.md"; then
-  python3 - "$TARGET/CLAUDE.md" "$BEGIN_MARKER" "$END_MARKER" "$block" <<'PY'
-import re, sys
-path, begin, end, block = sys.argv[1:5]
-src = open(path, encoding="utf-8").read()
-pattern = re.escape(begin) + r"[\s\S]*?" + re.escape(end)
-open(path, "w", encoding="utf-8").write(re.sub(pattern, lambda _: block, src))
-PY
+  # awk, not python3 or sed -i: python3 is not reliably present (on Windows
+  # it is often a Store stub that fails), and sed -i is not portable to BSD.
+  BLOCK_FILE="$(mktemp)"; OUT_FILE="$(mktemp)"
+  printf '%s\n' "$block" > "$BLOCK_FILE"
+  awk -v bf="$BLOCK_FILE" -v begin="$BEGIN_MARKER" -v end="$END_MARKER" '
+    skipping { if (index($0, end)) skipping = 0; next }
+    index($0, begin) {
+      while ((getline line < bf) > 0) print line
+      close(bf)
+      skipping = 1
+      next
+    }
+    { print }
+  ' "$TARGET/CLAUDE.md" > "$OUT_FILE"
+  mv "$OUT_FILE" "$TARGET/CLAUDE.md"
+  rm -f "$BLOCK_FILE"
   md_note="updated the managed block in your existing CLAUDE.md"
 else
   if grep -qE '^##[[:space:]]+Project context' "$TARGET/CLAUDE.md"; then
