@@ -28,3 +28,15 @@ integrates/verifies their results. Workers live in `.claude/agents/`.
 
 - The orchestrator independently re-runs the project's test suite after
   any worker reports green, before committing.
+
+## Project context (fill in when this template lands in a real project)
+
+- **Stack:**
+- **Test command:**
+- **Lint/typecheck command:**
+- **Build command:**
+
+This repo starts stack-agnostic on purpose — the team rules above don't
+assume any language or framework. The first task in a new project is filling
+in this section; workers rely on it to know what "run the tests" or "run the
+build" actually means here.
