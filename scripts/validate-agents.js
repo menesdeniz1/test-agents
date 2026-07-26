@@ -1,6 +1,10 @@
 #!/usr/bin/env node
-// Validates the template's own integrity: settings.json parses, and every
-// agent file has the frontmatter fields the orchestrator relies on.
+// Validates the template's own integrity: settings.json parses and uses real
+// keys, and every agent file has the frontmatter and report contract the
+// orchestrator relies on.
+//
+// This checks that the agent files are well-formed, not that they are good.
+// Measuring quality is golden-task/'s job.
 
 const fs = require("fs");
 const path = require("path");
@@ -8,16 +12,44 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const REQUIRED_FIELDS = ["name", "description", "tools", "model"];
 const VALID_MODELS = new Set(["sonnet", "opus", "haiku", "inherit"]);
+// The four sections every worker must end with, per CLAUDE.md.
+const REPORT_SECTIONS = ["Changed", "Verified", "Assumptions", "Open"];
+// Settings keys that silently do nothing — easy to reintroduce from memory.
+const DEAD_SETTINGS = {
+  teammateDefaultModel: "not a real setting; worker models live in each agent file's `model:`",
+  effort: 'not a settings.json key; the persisted one is "effortLevel"',
+};
+const VALID_EFFORT_LEVELS = new Set(["low", "medium", "high", "xhigh"]);
 
-let errors = [];
+const errors = [];
+
+// Windows editors happily write UTF-8 with a BOM, which would otherwise make
+// JSON.parse throw and the `^---` frontmatter match fail.
+function read(filePath) {
+  return fs.readFileSync(filePath, "utf8").replace(/^﻿/, "");
+}
 
 function checkSettings() {
   const settingsPath = path.join(ROOT, ".claude", "settings.json");
-  const raw = fs.readFileSync(settingsPath, "utf8");
+  let settings;
   try {
-    JSON.parse(raw);
+    settings = JSON.parse(read(settingsPath));
   } catch (e) {
     errors.push(`.claude/settings.json is not valid JSON: ${e.message}`);
+    return;
+  }
+
+  for (const [key, why] of Object.entries(DEAD_SETTINGS)) {
+    if (key in settings) {
+      errors.push(`.claude/settings.json: "${key}" is ${why}`);
+    }
+  }
+
+  const level = settings.effortLevel;
+  if (level !== undefined && !VALID_EFFORT_LEVELS.has(level)) {
+    errors.push(
+      `.claude/settings.json: effortLevel "${level}" is not one of ${[...VALID_EFFORT_LEVELS].join(", ")}`
+    );
   }
 }
 
@@ -41,24 +73,36 @@ function checkAgents() {
   if (files.length === 0) {
     errors.push(".claude/agents/ has no agent definitions");
   }
+
   for (const file of files) {
-    const content = fs.readFileSync(path.join(agentsDir, file), "utf8");
-    const fields = parseFrontmatter(content, `agents/${file}`);
+    const label = `agents/${file}`;
+    const content = read(path.join(agentsDir, file));
+    const fields = parseFrontmatter(content, label);
     if (!fields) continue;
 
     for (const key of REQUIRED_FIELDS) {
       if (!fields[key]) {
-        errors.push(`agents/${file}: missing required frontmatter field "${key}"`);
+        errors.push(`${label}: missing required frontmatter field "${key}"`);
       }
     }
+
     const expectedName = path.basename(file, ".md");
     if (fields.name && fields.name !== expectedName) {
       errors.push(
-        `agents/${file}: frontmatter name "${fields.name}" doesn't match filename "${expectedName}"`
+        `${label}: frontmatter name "${fields.name}" doesn't match filename "${expectedName}"`
       );
     }
+
     if (fields.model && !VALID_MODELS.has(fields.model)) {
-      errors.push(`agents/${file}: unknown model "${fields.model}"`);
+      errors.push(`${label}: unknown model "${fields.model}"`);
+    }
+
+    for (const section of REPORT_SECTIONS) {
+      if (!content.includes(`**${section}:**`)) {
+        errors.push(
+          `${label}: report contract broken — no "**${section}:**" section (see CLAUDE.md)`
+        );
+      }
     }
   }
 }

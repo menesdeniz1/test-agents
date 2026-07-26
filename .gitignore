@@ -1,1 +1,19 @@
+# Secrets — keep first, this is the one that matters
+.env
+.env.*
+!.env.example
+
+# Dependencies / build output — trim to your stack
 node_modules/
+__pycache__/
+.venv/
+venv/
+target/
+dist/
+build/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
