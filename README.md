@@ -1,5 +1,10 @@
 # Agent Altyapı Şablonu
 
+A reusable Claude Code workflow template with role-specific agent definitions,
+installation helpers, a validation script, and a reference task. This is tooling
+and configuration, not an application or a benchmarked claim of agent quality.
+Review the configuration before applying it to your own project.
+
 Claude Code için hazır **orkestracı + worker** ajan altyapısı. Bu repoyu
 klonlayıp içinde yeni bir proje geliştirebilir, ya da `.claude/` klasörü ile
 `CLAUDE.md` dosyasını mevcut bir projenin köküne kopyalayarak aynı sistemi
